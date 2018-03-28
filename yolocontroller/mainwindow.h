@@ -24,6 +24,7 @@ private:
     QString DARKFLOW_BASEDIR = "/home/chadrick/prj/darkflow";
     QString CFG_DIR=DARKFLOW_BASEDIR+"/cfg";
     QString CKPT_DIR=DARKFLOW_BASEDIR+"/ckpt";
+    QString DATA_DIR=DARKFLOW_BASEDIR+"/data";
 
     QString MODEL_FILE_DEFAULT_VALUE="/home/chadrick/prj/darkflow/cfg/tiny-yolo-face1.cfg";
     int EPOCH_DEFAULT_VALUE = 1000;
@@ -41,6 +42,7 @@ public slots:
     void openfilebrowser_findannot();
     void openfilebrowser_findimagesdir();
     void openfilebrowser_findprevckptdir();
+    void openfilebrowser_finddatasetdir();
 };
 
 #endif // MAINWINDOW_H

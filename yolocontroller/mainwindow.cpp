@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->annot_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_findannot()));
     connect(ui->imagesdir_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_findimagesdir()));
     connect(ui->previousckpt_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_findprevckptdir()));
+    connect(ui->traindir_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_finddatasetdir()));
 }
 
 MainWindow::~MainWindow()
@@ -156,5 +157,35 @@ int MainWindow::parse_prevckpt_checkpoint_file(QString checkpoint_path){
     return 0;
 }
 
+
+void MainWindow::openfilebrowser_finddatasetdir(){
+    QString dirpath = QFileDialog::getExistingDirectory(this,"open dataset dir",DATA_DIR,QFileDialog::ShowDirsOnly);
+
+    if(dirpath.isEmpty() || dirpath.isNull()){
+        return;
+    }
+    // try to extract the name for this dataset dir
+    QDir datadir(dirpath);
+
+    QString dirname = datadir.dirName();
+
+    ui->traindir_le->setText(dirpath);
+
+
+    // set the dirname as the suggested train session name
+    ui->newsessiontitle_le->setText(dirname);
+
+    // try to detect and setup annotation dir and images dir.
+    QDir annotationdir(dirpath+"/annotations");
+    if( annotationdir.exists()){
+        ui->annot_le->setText(annotationdir.absolutePath());
+    }
+
+    QDir imagesdir(dirpath+"/images");
+    if( imagesdir.exists()){
+        ui->imagesdir_le->setText(imagesdir.absolutePath());
+    }
+
+}
 
 
