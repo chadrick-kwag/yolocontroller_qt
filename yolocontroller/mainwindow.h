@@ -31,11 +31,15 @@ private:
 
     std::list<int> prevckptlist;
     int selected_prevckpt_num;
+    QString prevckptprefix;
+
+    std::list<QString> ckptcheck_extensions = {".meta",".profile",".index",".data-00000-of-00001"};
 
 
     void load_defaults();
     int setup_prevckpt_select(QString);
     int parse_prevckpt_checkpoint_file(QString);
+    bool check_ckptnum_files_ready(int ckptnum);
 
 public slots:
     void openfilebrowser_findmodel();
@@ -43,6 +47,8 @@ public slots:
     void openfilebrowser_findimagesdir();
     void openfilebrowser_findprevckptdir();
     void openfilebrowser_finddatasetdir();
+    void check_ckptnumchanged();
+
 };
 
 #endif // MAINWINDOW_H

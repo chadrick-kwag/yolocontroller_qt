@@ -15,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->imagesdir_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_findimagesdir()));
     connect(ui->previousckpt_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_findprevckptdir()));
     connect(ui->traindir_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_finddatasetdir()));
+    connect(ui->prevckptnum_dropdown,SIGNAL(currentTextChanged(QString)),this,SLOT(check_ckptnumchanged()));
 }
 
 MainWindow::~MainWindow()
@@ -110,7 +111,7 @@ int MainWindow::parse_prevckpt_checkpoint_file(QString checkpoint_path){
             if(firstread){
                 qDebug() << "inside first read";
                 firstread=false;
-                QRegularExpression re("^model_checkpoint_path.*");
+                QRegularExpression re("^model_checkpoint_path.*\"(.+)-\\d+\"");
                 QRegularExpressionMatch match = re.match(line);
                 bool hasMatch = match.hasMatch();
                 if(!hasMatch){
@@ -118,6 +119,9 @@ int MainWindow::parse_prevckpt_checkpoint_file(QString checkpoint_path){
                     qDebug() << "the first line of checkpoint_file is unexpected. abort";
                     return -1;
                 }
+
+                prevckptprefix = match.captured(1);
+
 
 
             }
@@ -189,3 +193,58 @@ void MainWindow::openfilebrowser_finddatasetdir(){
 }
 
 
+
+bool MainWindow::check_ckptnum_files_ready(int ckptnum){
+    QDir basedir(ui->previousckpt_le->text());
+
+    // check if basedir exists
+    if(!basedir.exists()){
+        qDebug() << "basedir not found. abort";
+        return false;
+    }
+
+    QString filebase = prevckptprefix+"-"+QString::number(ckptnum);
+    qDebug() << "filebase="+filebase;
+
+    for(auto &i : ckptcheck_extensions){
+        QString filefullname=filebase+i;
+        qDebug() << filefullname;
+        QFile targetfile(basedir.absolutePath()+"/"+filefullname);
+        if(!targetfile.exists()){
+            qDebug() <<  targetfile.fileName() + " doesn't exist";
+            return false;
+        }
+        else{
+            qDebug() << targetfile.fileName() + " exists";
+        }
+    }
+
+    return true;
+
+}
+
+
+void MainWindow::check_ckptnumchanged(){
+    bool checkreturn = check_ckptnum_files_ready((ui->prevckptnum_dropdown->currentText()).toInt());
+    if(checkreturn){
+        qDebug() << "check passed. "+ QDir::currentPath()+"/images/ok.png";
+        // show positive sign
+
+        QPixmap passimage(QDir::currentPath()+"/images/ok.png");
+
+        ui->checkimglabel->setPixmap(passimage);
+        ui->checkimglabel->setScaledContents(true);
+        //ui->checkimglabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+
+
+    }
+    else{
+
+        qDebug() << "check failed";
+        // show negative sign
+        QPixmap failimage(QDir::currentPath()+"/images/no.png");
+        ui->checkimglabel->setPixmap(failimage);
+        ui->checkimglabel->setScaledContents(true);
+
+    }
+}
