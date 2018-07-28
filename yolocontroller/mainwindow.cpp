@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->previousckpt_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_findprevckptdir()));
     connect(ui->traindir_find_btn,SIGNAL(clicked(bool)),this,SLOT(openfilebrowser_finddatasetdir()));
     connect(ui->prevckptnum_dropdown,SIGNAL(currentTextChanged(QString)),this,SLOT(check_ckptnumchanged()));
+    connect(ui->setup_new_session_btn,SIGNAL(clicked(bool)),this,SLOT(setup_new_session()));
+    connect(ui->gencmd_btn,SIGNAL(clicked(bool)),this,SLOT(generate_cmd()));
 }
 
 MainWindow::~MainWindow()
@@ -27,6 +29,8 @@ MainWindow::~MainWindow()
 void MainWindow::load_defaults(){
     ui->model_le->setText(MODEL_FILE_DEFAULT_VALUE);
     ui->epoch_le->setText(QString::number(EPOCH_DEFAULT_VALUE));
+    ui->gpu_usage_le->setText(QString::number(gpu_usage));
+    ui->save_num_le->setText(QString::number(save_num_value));
 }
 
 
@@ -236,7 +240,6 @@ void MainWindow::check_ckptnumchanged(){
         ui->checkimglabel->setScaledContents(true);
         //ui->checkimglabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
 
-
     }
     else{
 
@@ -247,4 +250,133 @@ void MainWindow::check_ckptnumchanged(){
         ui->checkimglabel->setScaledContents(true);
 
     }
+}
+
+int MainWindow::setup_new_session_main(){
+    // just use the session name from 'new session title'
+    QString session_name = ui->newsessiontitle_le->text();
+    if(session_name.isEmpty() || session_name.isNull()){
+        qDebug() << "session name is empty";
+        return 0;
+    }
+
+
+    QDir summarydir(SUMMARY_DIR+"/"+session_name);
+
+    if(summarydir.exists()){
+        qDebug() << "summary dir with path "+ summarydir.absolutePath()+ "already exists.";
+        return -1;
+    }
+
+
+    // we will try to create a session under the ckpt_dir
+    QDir sessiondir(CKPT_DIR+"/"+session_name);
+
+    if(sessiondir.exists()){
+        qDebug() << "session dir already exists. abort";
+        return -1;
+
+    }
+
+
+    bool retval = sessiondir.mkpath(sessiondir.absolutePath());
+
+    if(!retval){
+        qDebug() << "failed to create sessiondir";
+        return -1;
+    }
+
+    retval = summarydir.mkpath(summarydir.absolutePath());
+
+    if(!retval){
+        qDebug() << "failed to create summarydir";
+        return -1;
+    }
+
+    // copy the prev ckpts to new dir
+    QString prevckptdir = ui->previousckpt_le->text();
+    QString prevckpt_filebasename = prevckptprefix+"-"+ui->prevckptnum_dropdown->currentText();
+
+    QString prevckpt_filebasename_path = prevckptdir+"/"+prevckpt_filebasename;
+    QString targetckpt_filebasename_path = sessiondir.absolutePath()+"/"+prevckpt_filebasename;
+    qDebug() << prevckpt_filebasename_path;
+
+    for(auto &i : ckptcheck_extensions){
+        QFile targetfile(prevckpt_filebasename_path+i);
+        QString copytofilename = targetckpt_filebasename_path+i;
+        qDebug() << "attempting to copy " + targetfile.fileName();
+        set_statusbar_msg("copying to "+copytofilename);
+
+
+        if(!targetfile.copy(copytofilename)){
+            qDebug() << "failed copying to " + copytofilename;
+            return -1;
+        }
+
+    }
+
+    // setup the after-session-create ui elements
+
+    // populate summary dir
+    ui->summarydir_le->setText(summarydir.absolutePath());
+
+    ui->session_ckpt_dir_le->setText(sessiondir.absolutePath());
+
+    ui->load_ckpt_num_le->setText(ui->prevckptnum_dropdown->currentText());
+
+
+
+    return 0;
+
+}
+
+void MainWindow::setup_new_session(){
+    int retval = setup_new_session_main();
+    if(retval){
+        ui->statusBar->showMessage("new session create FAILURE");
+    }
+    else{
+        ui->statusBar->showMessage("new session create SUCCESS");
+    }
+}
+
+
+void MainWindow::set_statusbar_msg(QString msg){
+    ui->statusBar->showMessage(msg);
+}
+
+
+void MainWindow::generate_cmd(){
+    QString cmd="flow";
+
+    // add model value
+    cmd = cmd+" --model "+ui->model_le->text();
+
+    cmd = cmd + " --train";
+
+    // add annotation
+    cmd = cmd + " --annotation "+ui->annot_le->text();
+
+    // add dataset
+    cmd = cmd + " --dataset " + ui->imagesdir_le->text();
+
+    // add epoch
+    cmd = cmd + " --epoch "+ ui->epoch_le->text();
+
+    // add savenums
+    cmd = cmd + " --save "+ ui->save_num_le->text();
+
+    // add summary dir
+    cmd = cmd + " --summary "+ ui->summarydir_le->text();
+
+    // add gpu usage
+    cmd = cmd + " --gpu "+ ui->gpu_usage_le->text();
+
+    // add load num
+    cmd = cmd + " --load " + ui->load_ckpt_num_le->text();
+
+    // add backup dir (where current session ckpts reside)
+    cmd = cmd + " --backup "+ ui->session_ckpt_dir_le->text();
+
+    ui->gencmd_te->setText(cmd);
 }
